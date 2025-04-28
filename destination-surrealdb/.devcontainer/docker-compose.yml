@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # Python application service
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        # Update VARIANT to pick a Python version: 3, 3.12, 3.11, 3.10, 3.9, 3.8
+        VARIANT: 3.12
+        NODE_VERSION: "none" # Set to "none" if not needed
+
+    volumes:
+      - ..:/workspace:cached
+
+    # Overrides default command so things don't shut down after the process ends.
+    command: sleep infinity
+
+    # Uncomment the next line to use a non-root user for all processes.
+    # user: vscode
+
+    # Application security context
+    # cap_add:
+    #  - SYS_PTRACE
+    # security_opt:
+    #   - seccomp:unconfined
+
+  # SurrealDB service
+  # You should be able to connect to this surrealdb by running the below from the app container:
+  #   surreal sql -e ws://surrealdb:8000 -u root -p root
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    ports:
+      - "8000" # Expose SurrealDB HTTP port
+    command: start --log trace --user root --pass root memory # Start SurrealDB in memory mode

@@ -1,0 +1,5 @@
+#V2
+use ns test;
+use db test;
+info for db;
+select * from _airbyte_raw_airbyte_acceptance_table;

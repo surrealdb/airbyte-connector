@@ -1,0 +1,13 @@
+{
+    "id": "surrealdb",
+    "version": "1.0.0",
+    "name": "SurrealDB",
+    "options": {
+        "version": {
+            "type": "string",
+            "description": "The version of SurrealDB to install",
+            "proposals": ["2.2.2", "beta", "alpha", "nightly"],
+            "default": ""
+        }
+    }
+}
