@@ -19,4 +19,4 @@ Roadmap:
 - [x] Integration test data [integration_tests](./destination-surrealdb/integration_tests)
 - [ ] Integration test cases
 - [ ] Submit a pull request to [the Airbyte repository](https://github.com/airbytehq/airbyte/tree/master/airbyte-integrations/connectors)
-- [ ] Be a [pertner certified destination](https://docs.airbyte.com/platform/connector-development/partner-certified-destinations#definitions)
+- [ ] Be a [partner certified destination](https://docs.airbyte.com/platform/connector-development/partner-certified-destinations#definitions)
