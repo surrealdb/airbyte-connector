@@ -22,7 +22,7 @@ def test_invalid_url():
         ("surrealkv://test", "surrealkv://test"),
         ("file://test", "file://test"),
         ("wss://test", "wss://test"),
-        ("wss:test", "wss:test"),
+        ("wss:test", "wss://test"),
     ],
 )
 def test_normalize_url(input, expected):
