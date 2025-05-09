@@ -8,7 +8,9 @@ AIRBYTE_REPO_URL := https://github.com/airbytehq/airbyte.git
 AIRBYTE_DIR := airbyte
 CONNECTOR_NAME := destination-surrealdb
 CONNECTOR_DIR := $(CONNECTOR_NAME)
+DOCS_DIR := docs/integrations/destinations
 AIRBYTE_CONNECTORS_DIR := $(AIRBYTE_DIR)/airbyte-integrations/connectors
+AIRBYTE_DOCS_DIR := $(AIRBYTE_DIR)/docs/integrations/destinations
 
 .PHONY: all setup-dev build test clean develop
 
@@ -21,9 +23,14 @@ setup-dev: $(AIRBYTE_DIR)
 $(AIRBYTE_DIR):
 	@echo "Cloning Airbyte repository into $(AIRBYTE_DIR)..."
 	git clone --depth 1 $(AIRBYTE_REPO_URL) $(AIRBYTE_DIR)
-	@echo "Creating symlink for $(CONNECTOR_NAME)..."
-	ln -s ../../../$(CONNECTOR_DIR) $(AIRBYTE_CONNECTORS_DIR)/$(CONNECTOR_NAME)
-	@echo "Symlink created at $(AIRBYTE_CONNECTORS_DIR)/$(CONNECTOR_NAME)"
+	@echo "Copying $(CONNECTOR_NAME) to the Airbyte repository..."
+	rm -rf $(AIRBYTE_CONNECTORS_DIR)/$(CONNECTOR_NAME)
+	cp -r $(CONNECTOR_DIR) $(AIRBYTE_CONNECTORS_DIR)/$(CONNECTOR_NAME)
+	@echo "Copied $(CONNECTOR_NAME) to the Airbyte repository"
+	@echo "Copying docs to the Airbyte repository..."
+	cp $(DOCS_DIR)/surrealdb.md $(AIRBYTE_DOCS_DIR)/surrealdb.md
+	cp $(DOCS_DIR)/surrealdb-migrations.md $(AIRBYTE_DOCS_DIR)/surrealdb-migrations.md
+	@echo "Copied docs to the Airbyte repository"
 
 # Build the connector using airbyte-ci
 build: setup-dev
