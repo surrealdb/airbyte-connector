@@ -39,32 +39,46 @@ def normalize_url(url: str) -> str:
 
     return url
 
+def surrealdb_connect(config: Mapping[str, Any]) -> Surreal:
+    """
+    Connect to SurrealDB.
+
+    Args:
+        config (Mapping[str, Any]): SurrealDB connection config
+        config[CONFIG_SURREALDB_URL]: SurrealDB URL
+        config[CONFIG_SURREALDB_NAMESPACE]: SurrealDB namespace
+        config[CONFIG_SURREALDB_DATABASE]: SurrealDB database
+        config[CONFIG_SURREALDB_TOKEN]: SurrealDB token
+        config[CONFIG_SURREALDB_USERNAME]: SurrealDB username
+        config[CONFIG_SURREALDB_PASSWORD]: SurrealDB password
+
+    Returns:
+        Surreal: SurrealDB client
+    """
+    url = str(config.get(CONFIG_SURREALDB_URL))
+    url = normalize_url(url)
+    if url.startswith("surrealkv:") or url.startswith("rocksdb:") or url.startswith("file:"):
+        components = url.split("://")
+        logger.info("Using %s at %s", components[0], components[1])
+        os.makedirs(os.path.dirname(components[1]), exist_ok=True)
+
+    signin_args = {}
+    if CONFIG_SURREALDB_TOKEN in config:
+        signin_args["token"] = str(config[CONFIG_SURREALDB_TOKEN])
+    if CONFIG_SURREALDB_USERNAME in config:
+        signin_args["username"] = str(config[CONFIG_SURREALDB_USERNAME])
+    if CONFIG_SURREALDB_PASSWORD in config:
+        signin_args["password"] = str(config[CONFIG_SURREALDB_PASSWORD])
+
+    con = Surreal(url=url)
+    if signin_args.keys().__len__() > 0:
+        con.signin(signin_args)
+    return con
+
 class DestinationSurrealDB(Destination):
     """
     Destination connector for SurrealDB.
     """
-    @staticmethod
-    def __connect(config: Mapping[str, Any]) -> Surreal:
-        url = str(config.get(CONFIG_SURREALDB_URL))
-        url = normalize_url(url)
-        if url.startswith("surrealkv:") or url.startswith("rocksdb:") or url.startswith("file:"):
-            components = url.split("://")
-            logger.info("Using %s at %s", components[0], components[1])
-            os.makedirs(os.path.dirname(components[1]), exist_ok=True)
-
-        signin_args = {}
-        if CONFIG_SURREALDB_TOKEN in config:
-            signin_args["token"] = str(config[CONFIG_SURREALDB_TOKEN])
-        if CONFIG_SURREALDB_USERNAME in config:
-            signin_args["username"] = str(config[CONFIG_SURREALDB_USERNAME])
-        if CONFIG_SURREALDB_PASSWORD in config:
-            signin_args["password"] = str(config[CONFIG_SURREALDB_PASSWORD])
-
-        con = Surreal(url=url)
-        if signin_args.keys().__len__() > 0:
-            con.signin(signin_args)
-        return con
-
     def write(
         self, config: Mapping[str, Any], configured_catalog: ConfiguredAirbyteCatalog, input_messages: Iterable[AirbyteMessage]
     ) -> Iterable[AirbyteMessage]:
@@ -86,7 +100,7 @@ class DestinationSurrealDB(Destination):
         streams = {s.stream.name for s in configured_catalog.streams}
         logger.info("Starting write to SurrealDB with %d streams", len(streams))
 
-        con = self.__connect(config)
+        con = surrealdb_connect(config)
 
         namespace = str(config.get(CONFIG_SURREALDB_NAMESPACE))
         database = str(config.get(CONFIG_SURREALDB_DATABASE))
@@ -165,7 +179,7 @@ class DestinationSurrealDB(Destination):
         :return: AirbyteConnectionStatus indicating a Success or Failure
         """
         try:
-            con = self.__connect(config)
+            con = surrealdb_connect(config)
             logger.debug("Connected to SurrealDB. Running test query.")
             con.query("SELECT * FROM [1];")
             logger.debug("Test query succeeded.")
