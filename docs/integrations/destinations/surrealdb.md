@@ -9,25 +9,24 @@ This page guides you through the process of setting up the SurrealDB destination
 | Feature                        | Supported?\(Yes/No\) | Notes |
 | :----------------------------- | :------------------- | :---- |
 | Full Refresh Sync              | Yes                  |       |
-| Incremental - Append Sync      | Yes                  |       |
-| Incremental - Append + Deduped | Yes                  |       |
-| Namespaces                     | Yes                  |       |
+| Incremental - Append Sync      | No                  |       |
+| Incremental - Append + Deduped | No                  |       |
+| Namespaces                     | No                  |       |
 
 #### Output Schema
 
-Each stream will be output into its own table in TiDB. Each table will contain 3 columns:
+Each stream will be output into its own table in SurrealDB. Each table will contain 3 columns:
 
-- `_airbyte_ab_id`: a uuid assigned by Airbyte to each event that is processed. The column type in SurrealDB is `string`.
-- `_airbyte_emitted_at`: a timestamp representing when the event was pulled from the data source. The column type in TiDB is `datetime`.
-- `_airbyte_data`: a json blob representing with the event data. The column type in TiDB is `object`.
+- `_airbyte_raw_id`: a uuid assigned by Airbyte to each event that is processed. The column type in SurrealDB is `string`.
+The connector use this as the ID of each record in the destination SurrealDB table.
+- `_airbyte_extracted_at`: a timestamp representing when the event was pulled from the data source. The column type in SurrealDB is `datetime`.
+- `_airbyte_data`: a json blob representing with the event data. The column type in SurrealDB is `object`.
 
 ## Getting Started
 
 ### Requirements
 
-To use the TiDB destination, you'll need:
-
-- To sync data to SurrealDB **with normalization** you should have a SurrealDB database v2.2.0 or above.
+To use the SurrealDB destination, you'll need SurrealDB v2.2.0 or above.
 
 #### Network Access
 
@@ -40,15 +39,7 @@ You need a user with `DEFINE TABLE, DEFINE INDEX, UPSERT, SELECT, REMOVE` permis
 To create a dedicated database user, run the following commands against your database:
 
 ```sql
-USE NS your_ns;
-USE DB your_db;
-DEFINE USER airbyte ON DATABASE PASSWORD "your_password_here" ROLES OWNER;
-```
-
-Then give it access to the relevant database:
-
-```sql
-GRANT CREATE, INSERT, SELECT, DROP, CREATE VIEW, ALTER ON <database name>.* TO 'airbyte'@'%';
+DEFINE USER airbyte ON ROOT PASSWORD "your_password_here" ROLES OWNER;
 ```
 
 #### Target Database
@@ -57,15 +48,15 @@ SurrealDB doesn't differentiate between a database and schema. A database is ess
 
 ### Setup the SurrealDB destination in Airbyte
 
-Config the following information in the TiDB destination:
+Config the following information in the SurrealDB destination:
 
 - **Host**
 - **Port**
-- **Username** (Optional)
-- **Password** (Optional)
+- **Username** (`Token` or pair of `Username`/`Password` is required)
+- **Password** (`Token` or pair of `Username`/`Password` is required)
 - **Namespace**
 - **Database**
-- **token** (Optional)
+- **Token** (`Token` or pair of `Username`/`Password` is required)
 
 ## Known Limitations
 
@@ -85,8 +76,8 @@ Using this feature requires additional configuration, when creating the destinat
    2. Choose `Password Authentication` if you will be using a password as your secret for establishing the SSH Tunnel.
 3. `SSH Tunnel Jump Server Host` refers to the intermediate \(bastion\) server that Airbyte will connect to. This should be a hostname or an IP Address.
 4. `SSH Connection Port` is the port on the bastion server with which to make the SSH connection. The default port for SSH connections is `22`, so unless you have explicitly changed something, go with the default.
-5. `SSH Login Username` is the username that Airbyte should use when connection to the bastion server. This is NOT the TiDB username.
-6. If you are using `Password Authentication`, then `SSH Login Username` should be set to the password of the User from the previous step. If you are using `SSH Key Authentication` leave this blank. Again, this is not the TiDB password, but the password for the OS-user that Airbyte is using to perform commands on the bastion.
+5. `SSH Login Username` is the username that Airbyte should use when connection to the bastion server. This is NOT the SurrealDB username.
+6. If you are using `Password Authentication`, then `SSH Login Username` should be set to the password of the User from the previous step. If you are using `SSH Key Authentication` leave this blank. Again, this is not the SurrealDB password, but the password for the OS-user that Airbyte is using to perform commands on the bastion.
 7. If you are using `SSH Key Authentication`, then `SSH Private Key` should be set to the RSA Private Key that you are using to create the SSH connection. This should be the full contents of the key file starting with `-----BEGIN RSA PRIVATE KEY-----` and ending with `-----END RSA PRIVATE KEY-----`.
 
 ## Changelog
@@ -96,6 +87,6 @@ Using this feature requires additional configuration, when creating the destinat
 
 | Version | Date       | Pull Request                                               | Subject                                                                                       |
 | :------ | :--------- | :--------------------------------------------------------- | :-------------------------------------------------------------------------------------------- |
-| 0.1.0   | 2025-04-18 | [\#15592](https://github.com/airbytehq/airbyte/pull/1234567) | Added SurrealDB destination.                                                                       |
+| 0.1.0   | 2025-05-09 | [\#59742](https://github.com/airbytehq/airbyte/pull/59742) | Added SurrealDB destination.                                                                       |
 
 </details>
