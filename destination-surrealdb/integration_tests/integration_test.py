@@ -11,26 +11,17 @@ import tempfile
 from datetime import datetime, timezone
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, Iterable
+from typing import Any, Generator
 from unittest.mock import MagicMock
 
 import pytest
 
 from airbyte_cdk.models import (
-    AirbyteMessage,
-    AirbyteRecordMessage,
-    AirbyteStateMessage,
-    AirbyteStream,
-    ConfiguredAirbyteCatalog,
-    ConfiguredAirbyteStream,
-    DestinationSyncMode,
     Status,
-    SyncMode,
     Type,
 )
 from airbyte_cdk.models.airbyte_protocol_serializers import AirbyteMessageSerializer, ConfiguredAirbyteCatalogSerializer
 from airbyte_cdk.sql.secrets import SecretString
-from faker import Faker
 
 from destination_surrealdb import DestinationSurrealDB, surrealdb_connect
 from destination_surrealdb.destination import CONFIG_SURREALDB_TOKEN, CONFIG_SURREALDB_USERNAME, CONFIG_SURREALDB_PASSWORD, CONFIG_SURREALDB_NAMESPACE, CONFIG_SURREALDB_DATABASE
