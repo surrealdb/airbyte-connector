@@ -15,25 +15,23 @@ For information about how to use this connector within Airbyte, see [the documen
 
 From this connector directory, create a virtual environment:
 
-```
+```shell
 python -m venv .venv
 ```
 
 This will generate a virtualenv for this module in `.venv/`. Make sure this venv is active in your
 development environment of choice. To activate it from the terminal, run:
 
-```
+```shell
 source .venv/bin/activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+poetry install
+
+# Optionally run the tests
+# Note that poetry run pytest would fail with "ImportError while importing test module" if pytest is installed globally
+poetry run python -m pytest
 ```
 
 If you are in an IDE, follow your IDE's instructions to activate the virtualenv.
-
-Note that while we are installing dependencies from `requirements.txt`, you should only edit `setup.py` for your dependencies. `requirements.txt` is
-used for editable installs (`pip install -e`) to pull in Python dependencies from the monorepo and will call `setup.py`.
-If this is mumbo jumbo to you, don't worry about it, just put your deps in `setup.py` but install using `pip install -r requirements.txt` and everything
-should work as you expect.
 
 #### Create credentials
 
@@ -48,10 +46,9 @@ and place them into `secrets/config.json`.
 ### Locally running the connector
 
 ```
-python main.py spec
-python main.py check --config integration_tests/config.json
-python main.py discover --config integration_tests/config.json
-cat integration_tests/messages.jsonl| python main.py write --config integration_tests/config.json --catalog integration_tests/configured_catalog.json
+poetry run python main.py spec
+poetry run python main.py check --config integration_tests/config.json
+cat integration_tests/messages.jsonl | poetry run python main.py write --config integration_tests/config.json --catalog integration_tests/configured_catalog.json
 ```
 
 ### Locally running the connector docker image
