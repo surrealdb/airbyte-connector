@@ -10,7 +10,7 @@
 		"vscode": {
 			// Set *default* container specific settings.json values on container create.
 			"settings": { 
-				"python.defaultInterpreterPath": "${workspaceFolder}/venv/bin/python",
+				"python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
 				"python.linting.enabled": true,
 				"python.formatting.provider": "black",
 				"python.testing.pytestEnabled": true
