@@ -175,3 +175,95 @@ def test_write(
     assert outcome[0]["column3"] == datetime.fromisoformat("2022-06-20T18:56:18Z")
     assert outcome[0]["column4"] == 33.33
     assert outcome[0]["column5"] == [1, 2, None]
+
+
+def test_write_id(
+    config: dict[str, str],
+    request,
+):
+    destination = DestinationSurrealDB()
+    messages = Path("integration_tests/messages_id.jsonl").read_text(encoding="utf-8").splitlines()
+    messages = [AirbyteMessageSerializer.load(json.loads(message)) for message in messages]
+    configured_catalog = json.loads(Path("integration_tests/configured_catalog.json").read_text(encoding="utf-8"))
+    configured_catalog = ConfiguredAirbyteCatalogSerializer.load(configured_catalog)
+    wrote = destination.write(config=config, configured_catalog=configured_catalog, input_messages=messages)
+    for m in wrote:
+        assert m.type == Type.STATE
+    sdb = surrealdb_connect(config)
+    # Note that we don't check for existence of namespace and database here
+    # because they are required for the destination to work
+    sdb.use(config["surrealdb_namespace"], config["surrealdb_database"])
+    outcome = sdb.select("airbyte_acceptance_table_id")
+    # log the outcome
+    print(outcome)
+    assert len(outcome) == 1
+    assert outcome[0]["_airbyte_extracted_at"] != datetime.fromtimestamp(1664705198575 / 1000, timezone.utc)
+    assert isinstance(outcome[0]["_airbyte_extracted_at"], datetime)
+    assert outcome[0]["id1"] == "a"
+    assert outcome[0]["id2"] == 1
+    assert outcome[0]["column1"] == "test"
+    assert outcome[0]["column2"] == 222
+    assert outcome[0]["column3"] == datetime.fromisoformat("2022-06-20T18:56:18Z")
+    assert outcome[0]["column4"] == 33.33
+    assert outcome[0]["column5"] == [1, 2, None]
+
+def test_write_id_append(
+    config: dict[str, str],
+    request,
+):
+    destination = DestinationSurrealDB()
+    messages = Path("integration_tests/messages_id_append.jsonl").read_text(encoding="utf-8").splitlines()
+    messages = [AirbyteMessageSerializer.load(json.loads(message)) for message in messages]
+    configured_catalog = json.loads(Path("integration_tests/configured_catalog.json").read_text(encoding="utf-8"))
+    configured_catalog = ConfiguredAirbyteCatalogSerializer.load(configured_catalog)
+    wrote = destination.write(config=config, configured_catalog=configured_catalog, input_messages=messages)
+    for m in wrote:
+        assert m.type == Type.STATE
+    sdb = surrealdb_connect(config)
+    # Note that we don't check for existence of namespace and database here
+    # because they are required for the destination to work
+    sdb.use(config["surrealdb_namespace"], config["surrealdb_database"])
+    outcome = sdb.select("airbyte_acceptance_table_id_append")
+    # log the outcome
+    print(outcome)
+    assert len(outcome) == 1, f"Expected 1 row, got {len(outcome)}: {outcome}"
+    assert outcome[0]["_airbyte_extracted_at"] != datetime.fromtimestamp(1664705198575 / 1000, timezone.utc)
+    assert isinstance(outcome[0]["_airbyte_extracted_at"], datetime)
+    assert outcome[0]["id1"] == "a"
+    assert outcome[0]["id2"] == 1
+    assert outcome[0]["column1"] == "test"
+    assert outcome[0]["column2"] == 222
+    assert outcome[0]["column3"] == datetime.fromisoformat("2022-06-20T18:56:18Z")
+    assert outcome[0]["column4"] == 33.33
+    assert outcome[0]["column5"] == [1, 2, None]
+
+
+def test_write_id_append_dedup(
+    config: dict[str, str],
+    request,
+):
+    destination = DestinationSurrealDB()
+    messages = Path("integration_tests/messages_id_append_dedup.jsonl").read_text(encoding="utf-8").splitlines()
+    messages = [AirbyteMessageSerializer.load(json.loads(message)) for message in messages]
+    configured_catalog = json.loads(Path("integration_tests/configured_catalog.json").read_text(encoding="utf-8"))
+    configured_catalog = ConfiguredAirbyteCatalogSerializer.load(configured_catalog)
+    wrote = destination.write(config=config, configured_catalog=configured_catalog, input_messages=messages)
+    for m in wrote:
+        assert m.type == Type.STATE
+    sdb = surrealdb_connect(config)
+    # Note that we don't check for existence of namespace and database here
+    # because they are required for the destination to work
+    sdb.use(config["surrealdb_namespace"], config["surrealdb_database"])
+    outcome = sdb.select("airbyte_acceptance_table_id_append_dedup")
+    # log the outcome
+    print(outcome)
+    assert len(outcome) == 1, f"Expected 1 row, got {len(outcome)}: {outcome}"
+    assert outcome[0]["_airbyte_extracted_at"] != datetime.fromtimestamp(1664705198575 / 1000, timezone.utc)
+    assert isinstance(outcome[0]["_airbyte_extracted_at"], datetime)
+    assert outcome[0]["id1"] == "a"
+    assert outcome[0]["id2"] == 1
+    assert outcome[0]["column1"] == "test"
+    assert outcome[0]["column2"] == 222
+    assert outcome[0]["column3"] == datetime.fromisoformat("2022-06-20T18:56:18Z")
+    assert outcome[0]["column4"] == 33.33
+    assert outcome[0]["column5"] == [1, 2, None]

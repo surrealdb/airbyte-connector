@@ -12,6 +12,7 @@ from logging import getLogger
 from typing import Any, Dict, Iterable, List, Mapping
 
 from surrealdb import Surreal
+from surrealdb.data.types.record_id import RecordID
 
 from airbyte_cdk.destinations import Destination
 from airbyte_cdk.models import AirbyteConnectionStatus, AirbyteMessage, ConfiguredAirbyteCatalog, DestinationSyncMode, Status, Type
@@ -77,6 +78,12 @@ def surrealdb_connect(config: Mapping[str, Any]) -> Surreal:
         con.signin(signin_args)
     return con
 
+class _Unchanged:
+    def __repr__(self):
+        return "Unchanged"
+
+Unchaged = _Unchanged()
+
 class DestinationSurrealDB(Destination):
     """
     Destination connector for SurrealDB.
@@ -120,6 +127,7 @@ class DestinationSurrealDB(Destination):
             do_write_raw = config["airbyte_write_raw"]
 
         dest_table_definitions = {}
+        dest_table_primary_keys: Dict[str, List[str]] = {}
 
         for configured_stream in configured_catalog.streams:
             table_name = configured_stream.stream.name
@@ -167,6 +175,7 @@ class DestinationSurrealDB(Destination):
                 con.query(f"DEFINE FIELD OVERWRITE {field_name} ON {table_name} TYPE {field_type};")
 
             dest_table_definitions[table_name] = fields_to_types
+            dest_table_primary_keys[table_name] = configured_stream.primary_key
 
         buffer = defaultdict(lambda: defaultdict(list))
 
@@ -176,7 +185,7 @@ class DestinationSurrealDB(Destination):
                 for stream_name in buffer.keys():
                     logger.info("flushing buffer for state: %s", message)
                     DestinationSurrealDB._flush_buffer(
-                        con=con, buffer=buffer, stream_name=stream_name)
+                        con=con, buffer=buffer, stream_name=stream_name, primary_key=dest_table_primary_keys[stream_name])
 
                 buffer = defaultdict(lambda: defaultdict(list))
 
@@ -212,16 +221,14 @@ class DestinationSurrealDB(Destination):
                     else:
                         buffer[stream_name]["_airbyte_data"].append(data)
                 else:
-                    for field_name in data.keys():
-                        raw_data = data[field_name]
-                        if field_name not in dest_table_definitions[stream_name]:
-                            logger.error("field %s not in dest_table_definitions[%s]", field_name, stream_name)
+                    for field_name, field_type in dest_table_definitions[stream_name].items():
+                        if field_name in AB_INTERNAL_COLUMNS:
                             continue
-                        field_type = dest_table_definitions[stream_name][field_name]
+                        raw_data = data[field_name] if field_name in data else Unchaged
                         if field_type == "datetime":
                             # This supports the following cases:
                             # - "2022-06-20T18:56:18" in case airbyte_type is "timestamp_without_timezone"
-                            raw_data = datetime.datetime.fromisoformat(raw_data)
+                            raw_data = datetime.datetime.fromisoformat(raw_data) if raw_data is not Unchaged else Unchaged
                         buffer[stream_name][field_name].append(raw_data)
             else:
                 logger.info(
@@ -230,23 +237,62 @@ class DestinationSurrealDB(Destination):
         # flush any remaining messages
         for stream_name in buffer.keys():
             DestinationSurrealDB._flush_buffer(
-                con=con, buffer=buffer, stream_name=stream_name)
+                con=con, buffer=buffer, stream_name=stream_name, primary_key=dest_table_primary_keys[stream_name])
 
     @staticmethod
-    def _flush_buffer(*, con: Surreal, buffer: Dict[str, Dict[str, List[Any]]], stream_name: str):
+    def _flush_buffer(*, con: Surreal, buffer: Dict[str, Dict[str, List[Any]]], stream_name: str, primary_key: List[str]):
         table_name = stream_name
         buf = buffer[stream_name]
         field_names = buf.keys()
         id_field = "_airbyte_ab_id" if "_airbyte_ab_id" in field_names else AB_RAW_ID_COLUMN
         id_column = buf[id_field]
+        logger.debug("buf: %s", buf)
         for i, _id in enumerate(id_column):
             record = {}
             for field_name in field_names:
-                record[field_name] = buf[field_name][i]
+                v = buf[field_name][i]
+                if v is Unchaged:
+                    continue
+                record[field_name] = v
+            id = None
+            if primary_key:
+                id = [record[k] for ks in primary_key for k in ks]
+                logger.debug("primary key: %s", id)
+            else:
+                id = _id
+            # Note that using the upsert RPC function seems not work in this case,
+            # because our _id in this case is not a string-like value.
+            # Also, the upsert RPC function corresponds to the UPSERT CONTENT, rather than UPSERT MERGE which
+            # we want to use here.
+            # con.upsert(f"{table_name}:{_id}", record)
+            qvars = {
+                "tb": table_name,
+            }
+            id_expr = None
+            if isinstance(id, List):
+                id_exprs = []
+                for idx, v in enumerate(id):
+                    qvars[f"id_{idx}"] = v
+                    id_exprs.append(f"$id_{idx}")
+                id_expr = "[" + ", ".join(id_exprs) + "]"
+                # id_expr = """string::join(", ", """ + ", ".join(id_exprs) + ")"
+                qvars["id"] = RecordID(table_name, id)
+                id_expr = "$id"
+            else:
+                qvars["id"] = id
+                id_expr = "$id"
+
+            for k, v in record.items():
+                qvars[f"rec_{k}"] = v
+            content = "{id: " + id_expr + ", " + ", ".join([f"{k}: $rec_{k}" for k in record.keys()]) + "}"
+            q = f"""UPSERT type::table($tb) MERGE {content};"""
+            logger.debug("query: %s", q)
+            logger.debug("qvars: %s", qvars)
             try:
-                con.upsert(f"{table_name}:{_id}", record)
+                res = con.query(q, qvars)
+                logger.debug("res: %s", res)
             except Exception as e:
-                logger.error("error upserting record %s: %s", record, e)
+                logger.error("error upserting record %s %s: %s", f"{table_name}:{id}", record, e)
 
     def check(self, logger: logging.Logger, config: Mapping[str, Any]) -> AirbyteConnectionStatus:
         """

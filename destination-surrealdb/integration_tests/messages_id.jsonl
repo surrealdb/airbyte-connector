@@ -1,0 +1,2 @@
+{"type": "RECORD", "record": {"stream": "airbyte_acceptance_table_id", "emitted_at": 1664705198575, "data": { "id1": "a", "id2": 1, "column1": "test", "column2": 222, "column3": "2022-06-20T18:56:18", "column4": 33.33, "column5": [1,2,null]}}}
+{"type": "STATE", "state": {"data": {"state": "1"}}}

@@ -33,6 +33,129 @@
         },
         "sync_mode": "full_refresh",
         "destination_sync_mode": "overwrite"
+      },
+      {
+        "stream": {
+          "name": "airbyte_acceptance_table_id",
+          "supported_sync_modes": ["full_refresh"],
+          "source_defined_cursor": false,
+          "json_schema": {
+            "type": "object",
+            "properties": {
+              "id1": {
+                "type": "string"
+              },
+              "id2": {
+                "type": "number"
+              },
+              "column1": {
+                "type": "string"
+              },
+              "column2": {
+                "type": "number"
+              },
+              "column3": {
+                "type": "string",
+                "format": "date-time",
+                "airbyte_type": "timestamp_without_timezone"
+              },
+              "column4": {
+                "type": "number"
+              },
+              "column5": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "sync_mode": "full_refresh",
+        "destination_sync_mode": "overwrite",
+        "primary_key": [["id1", "id2"]]
+      },
+      {
+        "stream": {
+          "name": "airbyte_acceptance_table_id_append",
+          "supported_sync_modes": ["incremental"],
+          "source_defined_cursor": false,
+          "json_schema": {
+            "type": "object",
+            "properties": {
+              "id1": {
+                "type": "string"
+              },
+              "id2": {
+                "type": "number"
+              },
+              "column1": {
+                "type": "string"
+              },
+              "column2": {
+                "type": "number"
+              },
+              "column3": {
+                "type": "string",
+                "format": "date-time",
+                "airbyte_type": "timestamp_without_timezone"
+              },
+              "column4": {
+                "type": "number"
+              },
+              "column5": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "sync_mode": "incremental",
+        "destination_sync_mode": "append",
+        "primary_key": [["id1", "id2"]]
+      },
+      {
+        "stream": {
+          "name": "airbyte_acceptance_table_id_append_dedup",
+          "supported_sync_modes": ["incremental"],
+          "source_defined_cursor": false,
+          "json_schema": {
+            "type": "object",
+            "properties": {
+              "id1": {
+                "type": "string"
+              },
+              "id2": {
+                "type": "number"
+              },
+              "column1": {
+                "type": "string"
+              },
+              "column2": {
+                "type": "number"
+              },
+              "column3": {
+                "type": "string",
+                "format": "date-time",
+                "airbyte_type": "timestamp_without_timezone"
+              },
+              "column4": {
+                "type": "number"
+              },
+              "column5": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "sync_mode": "incremental",
+        "destination_sync_mode": "append_dedup",
+        "primary_key": [["id1", "id2"]]
       }
     ]
   }
