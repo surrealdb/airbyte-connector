@@ -49,6 +49,7 @@ and place them into `secrets/config.json`.
 poetry run python main.py spec
 poetry run python main.py check --config integration_tests/config.json
 cat integration_tests/messages.jsonl | poetry run python main.py write --config integration_tests/config.json --catalog integration_tests/configured_catalog.json
+cat integration_tests/messages_id_append.jsonl | poetry run python main.py write --config integration_tests/config.json --catalog integration_tests/configured_catalog.json
 ```
 
 ### Locally running the connector docker image
