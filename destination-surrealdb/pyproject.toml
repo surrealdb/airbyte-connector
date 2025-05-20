@@ -22,7 +22,7 @@ airbyte-cdk = {version = "^6.45.10", extras = []}
 # surrealdb.py 1.0.3 depends on packaging 24.2, where airbite-cdk depends on langchain which depends on packaging 23.x,
 # which results in poetry dependency resolution failure.
 # This is a temporary fix so that surrealdb.py depends on packaging >= 23.0.
-surrealdb = {git = "https://github.com/mumoshu/surrealdb.py.git", rev = "849bd5d4cba514269d455b0f5a957ab0359783eb"}
+surrealdb = {git = "https://github.com/surrealdb/surrealdb.py.git", rev = "9622672f080a56fb466270b49ae8421ee8b0cbc7"}
 
 [tool.poetry.scripts]
 destination-surrealdb = "destination_surrealdb.run:run"
