@@ -55,6 +55,9 @@ develop:
 	@echo "Follow instructions within the Nix shell if needed (e.g., activate venv, install deps)."
 	nix develop
 
+# This is the old way to install Airbyte dependencies within the Nix shell.
+# It is not used anymore, but kept here for reference.
+# Use the devcontainer instead. The devcontainer runs `make airbyte-dev` below on startup.
 .PHONY: deps
 deps:
 	@echo "Installing Airbyte dependencies..."
@@ -64,3 +67,50 @@ deps:
 	  pip install poetry && \
 	  pip install pipx && \
 	  make tools.airbyte-ci-dev.install
+
+.PHONY: airbyte-dev
+airbyte-dev: $(AIRBYTE_DIR)
+	@echo "Installing Airbyte dependencies..."
+	cd $(AIRBYTE_DIR) && \
+	  pip install --user poetry && \
+	  poetry config virtualenvs.in-project true && \
+	  pip install pipx --user poetry && \
+	  pipx install uv && \
+	  make tools.airbyte-ci-dev.install
+	@echo "Airbyte devenv is ready. Run `cd $(AIRBYTE_DIR)` to get started!"
+	@echo " 1. Run `airbyte-ci connectors --name destination-surrealdb build` to build the connector."
+	@echo " 2. Run `docker run --rm airbyte/destination-surrealdb:dev spec` to the build worked and the image is available within the local docker daemon."
+	@echo " 3. Run `abctl local install" to start the local, kind-based installation of Airbyte."
+	@echo " 4. Run `kubectl create -f ../surrealdb.yaml` to deploy a local SurrealDB instance."
+	@echo " 5. Run `kind load docker-image --name airbyte-abctl airbyte/destination-surrealdb:dev` to load the image into the kind cluster."
+	@echo " 6. Run `abctl local credentials` to get the credentials for the local Airbyte instance."
+	@echo " 7. Open http://localhost:8000, choose whatever email, and submit the password you got from the previous step."
+	@echo " 8. Go to `Settings > Workspace > Destinations` and click the "New Connector" button."
+	@echo "    Connector display name: SurrealDB"
+	@echo "    Docker repository name: airbyte/destination-surrealdb"
+	@echo "    Docker image tag: dev"
+	@echo " 9. Click `Add` to create the connector."
+	@echo "10. It should show up `New destination` form. Put in the following values:"
+	@echo "    surrealdb_database: airbyte"
+	@echo "    surrealdb_namespace: airbyte"
+	@echo "    surrealdb_password: root"
+	@echo "    surrealdb_url: ws://surrealdb.default:8000/rpc"
+	@echo "    surrealdb_username: root"
+	@echo "11. Click `Set up destination` to create the destination."
+	@echo "    If the creation fails with `An exception occurred: gaierror(-5, 'No address associated with hostname')`, verify that you deployed the SurrealDB instance onto the same kind cluster as Airbyte."
+	@echo "    If the connection check fails with `An exception occurred: InvalidStatus(Response(status_code=404, reason_phrase='Not Found', ...` verify that you've added /rpc suffix to the URL."
+	@echo "12. Click `Create your first connection` and configure the source and destination."
+	@echo "    Source: CSV (epidemiology, https://storage.googleapis.com/covid19-open-data/v2/latest/epidemiology.csv)"
+	@echo "    Destination: Select an existing destination > SurrealDB"
+	@echo "13. Select the stream with the following values:"
+	@echo "    Replicate Source"
+	@echo "    Schema: epidemiology"
+	@echo "    Sync mode: Full refresh / Overwrite"
+	@echo "14. Click `Next`"
+	@echo "15. Complete the connection configuration with the following values:"
+	@echo "    Connection name: csv-to-sdb-test"
+	@echo "    Schedule type: Manual"
+	@echo "    Destination Namespace: Destination-defined"
+	@echo "16. Click `Submit`.
+	@echo "17. Click `Sync now` to start the sync."
+	@echo "See devcontainer.md for more details."

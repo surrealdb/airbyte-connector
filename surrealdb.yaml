@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: surrealdb
+  labels:
+    app: surrealdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: surrealdb
+  template:
+    metadata:
+      labels:
+        app: surrealdb
+    spec:
+      containers:
+      - name: surrealdb
+        image: surrealdb/surrealdb:latest
+        ports:
+        - containerPort: 8000
+        args: ["start", "--log", "trace", "--user", "root", "--pass", "root", "memory"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: surrealdb
+spec:
+  selector:
+    app: surrealdb
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP

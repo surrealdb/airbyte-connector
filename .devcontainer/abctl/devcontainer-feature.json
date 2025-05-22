@@ -1,0 +1,13 @@
+{
+    "id": "abctl",
+    "version": "1.0.0",
+    "name": "abctl",
+    "options": {
+        "version": {
+            "type": "string",
+            "description": "The version of abctl to install. See https://github.com/airbytehq/abctl/releases",
+            "proposals": ["v0.25.0", "latest"],
+            "default": "latest"
+        }
+    }
+}

@@ -4,6 +4,31 @@ This is the repository for developing the Airbyte SurrealDB destination connecto
 
 The actual connector code is located in the [destination-surrealdb](./destination-surrealdb) directory, which will eventually be contributed to [connectors](https://github.com/airbytehq/airbyte/tree/master/airbyte-integrations/connectors) in the Airbyte repository.
 
+## Development
+
+We have two options for developing the connector:
+
+- [devcontainer](#devcontainer)
+- [Nix](#nix)
+
+### devcontainer
+
+**Connector testing with local Airbyte instance**
+
+You can reopen this repository by clicking `Reopen in Container` on VS Code or Cursor, and run `make airbyte-dev` to install Airbyte and `airbyte-ci` dependencies within the dev env.
+
+It will then print a comprehensive set of instructions for getting started with the connector testing.
+
+See [devcontainer.md](./devcontainer.md) for more details.
+
+**Connector development**
+
+There's a separate devcontainer under the `destination-surrealdb` directory.
+
+Open the directory in VS Code or Cursor, do `Reopen in Container`, and you can run `poetry run python -m pytest` to run the tests.
+
+### Nix
+
 To get started, install `nix` and run `make develop`- it will clone the Airbyte repository, run `nix develop`, activate a venv, and install Airbyte and `airbyte-ci` dependencies within the dev env.
 
 You can then `cd airbyte` and run various `airbyte-ci` commands to test the SurrealDB connector and even other connectors.

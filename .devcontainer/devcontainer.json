@@ -1,0 +1,59 @@
+{
+	"name": "destination-surrealdb",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "app",
+	"workspaceFolder": "/workspace",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Set *default* container specific settings.json values on container create.
+			"settings": { 
+				"python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+				"python.linting.enabled": true,
+				"python.formatting.provider": "black",
+				"python.testing.pytestEnabled": true
+			},
+			
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"ms-python.python",
+				"ms-python.pylint",
+				"ms-python.vscode-pylance",
+                "ms-azuretools.vscode-docker",
+                "njpwerner.autodocstring",
+                "ms-python.black-formatter",
+                "ms-python.isort"
+			]
+		}
+	},
+
+	"features": {
+		"./surrealdb": {
+			"version": "2.2.2"
+		},
+		"./abctl": {
+			"version": "0.25.0"
+		},
+		"ghcr.io/devcontainers/features/docker-in-docker:1": {
+			"version": "latest"
+		},
+		"ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+			"minikube": "none",
+			"version": "latest"
+		},
+		"ghcr.io/mpriscella/features/kind:1": {
+			"version": "latest"
+		}
+	},
+	
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [8000],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "make airbyte-dev",
+
+	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode"
+} 
