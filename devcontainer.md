@@ -282,7 +282,7 @@ cat - <<EOF > source.json
   "workspaceId": "${AB_WORKSPACE_ID}",
   "configuration": {
     "sourceType": "file",
-    "dataset_name": "my-dataset",
+    "dataset_name": "my_dataset",
     "format": "csv",
     "url": "https://storage.googleapis.com/covid19-open-data/v2/latest/epidemiology.csv",
     "provider": {
@@ -402,9 +402,16 @@ AB_JOB_STATUS=$(curl -X GET http://localhost:8000/api/public/v1/jobs/${AB_JOB_ID
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $AB_TOKEN" | jq -r .status)
 
+i=0
+TIMEOUT=300
 while [ "$AB_JOB_STATUS" = "running" ]; do
+  i=$((i+1))
+  if [ $i -gt $TIMEOUT ]; then
+    echo "Job is still running after $TIMEOUT seconds. Aborting."
+    exit 1
+  fi
   sleep 1
-  curl -X GET http://localhost:8000/api/public/v1/jobs/${AB_JOB_ID} \
+  curl -s -X GET http://localhost:8000/api/public/v1/jobs/${AB_JOB_ID} \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer $AB_TOKEN" > job.json
   AB_JOB_STATUS=$(jq -r .status job.json)
@@ -416,3 +423,10 @@ curl -X GET http://localhost:8000/api/public/v1/jobs/${AB_JOB_ID} \
 ```
 
 If everything goes well, you should see the data flowing into your SurrealDB instance.
+
+To run the SurrealDB SQL shell for checking the data in the SurrealDB instance, you can use the following command:
+
+```bash
+export SURREALDB_POD_NAME=$(kubectl get pods -l app=surrealdb -o jsonpath='{.items[0].metadata.name}')
+kubectl exec $SURREALDB_POD_NAME -it -- /surreal sql -u root -p root --ns airbyte --db airbyte
+```
