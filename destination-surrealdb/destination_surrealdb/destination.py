@@ -161,15 +161,20 @@ class DestinationSurrealDB(Destination):
             
             stream_fields = configured_stream.stream.json_schema["properties"].keys()
             for field_name in stream_fields:
+                required = configured_stream.stream.json_schema["required"]
                 props = configured_stream.stream.json_schema["properties"][field_name]
                 tpe = props["type"]
                 fmt = props["format"] if "format" in props else None
+                sdb_type = None
                 if tpe == "string" and fmt == "date-time":
-                    fields_to_types[field_name] = "datetime"
+                    sdb_type = "datetime"
                 elif tpe == "integer":
-                    fields_to_types[field_name] = "int"
+                    sdb_type = "int"
                 else:
-                    fields_to_types[field_name] = tpe
+                    sdb_type = tpe
+                if field_name in required:
+                    sdb_type = f"option<{sdb_type}>"
+                fields_to_types[field_name] = sdb_type
 
             for field_name, field_type in fields_to_types.items():
                 con.query(f"DEFINE FIELD OVERWRITE {field_name} ON {table_name} TYPE {field_type};")
@@ -225,7 +230,7 @@ class DestinationSurrealDB(Destination):
                         if field_name in AB_INTERNAL_COLUMNS:
                             continue
                         raw_data = data[field_name] if field_name in data else Unchaged
-                        if field_type == "datetime":
+                        if field_type == "datetime" or field_type == "option<datetime>":
                             # This supports the following cases:
                             # - "2022-06-20T18:56:18" in case airbyte_type is "timestamp_without_timezone"
                             raw_data = datetime.datetime.fromisoformat(raw_data) if raw_data is not Unchaged else Unchaged
