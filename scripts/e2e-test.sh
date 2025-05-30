@@ -395,11 +395,10 @@ EOF
     
     # Check if data exists in SurrealDB
     log_info "Checking data in SurrealDB..."
-    data_check=$(kubectl exec "$SURREALDB_POD_NAME" -- /surreal sql \
-        -u root -p root --ns airbyte --db airbyte \
-        --query "SELECT * FROM test_dataset LIMIT 1;" 2>/dev/null || echo "[]")
+    data_check=$(echo "SELECT * FROM test_dataset LIMIT 1;" | kubectl exec "$SURREALDB_POD_NAME" -- /surreal sql \
+        -u root -p root --ns airbyte --db airbyte 2>/dev/null || echo "[[]]")
     
-    if echo "$data_check" | grep -q "\[\]" || [ -z "$data_check" ]; then
+    if echo "$data_check" | grep -q "\[\[\]\]" || [ -z "$data_check" ]; then
         log_warning "No data found in SurrealDB, but sync job completed successfully"
         log_info "This might be expected if the test dataset is empty or the table name is different"
     else
