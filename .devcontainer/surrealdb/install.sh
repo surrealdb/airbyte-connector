@@ -44,9 +44,15 @@ elif [ "$VERSION" = "latest" ]; then
   # For latest, don't pass any version flags - let the script use the default
   INSTALL_ARGS=""
 else
-  # For specific versions, remove the "v" prefix if present and pass --version flag
-  VERSION_CLEAN="${VERSION#v}"
-  INSTALL_ARGS="--version $VERSION_CLEAN"
+  # For specific versions, ensure the "v" prefix is present
+  if [[ "$VERSION" == v* ]]; then
+    # Already has "v" prefix
+    VERSION_WITH_V="$VERSION"
+  else
+    # Add "v" prefix
+    VERSION_WITH_V="v$VERSION"
+  fi
+  INSTALL_ARGS="--version $VERSION_WITH_V"
 fi
 
 curl -sSf https://install.surrealdb.com | sh -s -- $INSTALL_ARGS
