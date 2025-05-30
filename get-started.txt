@@ -1,0 +1,35 @@
+ 1. Run `airbyte-ci connectors --name destination-surrealdb build` to build the connector.
+ 2. Run `docker run --rm airbyte/destination-surrealdb:dev spec` to the build worked and the image is available within the local docker daemon.
+ 3. Run `abctl local install` to start the local, kind-based installation of Airbyte.
+ 4. Run `kubectl create -f ../surrealdb.yaml` to deploy a local SurrealDB instance.
+ 5. Run `kind load docker-image --name airbyte-abctl airbyte/destination-surrealdb:dev` to load the image into the kind cluster.
+ 6. Run `abctl local credentials` to get the credentials for the local Airbyte instance.
+ 7. Open http://localhost:8000, choose whatever email, and submit the password you got from the previous step.
+ 8. Go to `Settings > Workspace > Destinations` and click the "New Connector" button.
+    Connector display name: SurrealDB
+    Docker repository name: airbyte/destination-surrealdb
+    Docker image tag: dev
+ 9. Click `Add` to create the connector.
+10. It should show up `New destination` form. Put in the following values:
+    surrealdb_database: airbyte
+    surrealdb_namespace: airbyte
+    surrealdb_password: root
+    surrealdb_url: ws://surrealdb.default:8000/rpc
+11. Click `Set up destination` to create the destination.
+    If the creation fails with `An exception occurred: gaierror(-5, 'No address associated with hostname')`, verify that you deployed the SurrealDB instance onto the same kind cluster as Airbyte.
+    If the connection check fails with `An exception occurred: InvalidStatus(Response(status_code=404, reason_phrase='Not Found'`, verify that you've added /rpc suffix to the URL.
+12. Click `Create your first connection` and configure the source and destination.
+    Source: CSV (epidemiology, https://storage.googleapis.com/covid19-open-data/v2/latest/epidemiology.csv)
+    Destination: Select an existing destination > SurrealDB
+13. Select the stream with the following values:
+    Replicate Source
+    Schema: epidemiology
+    Sync mode: Full refresh / Overwrite
+14. Click `Next`
+15. Complete the connection configuration with the following values:
+    Connection name: csv-to-sdb-test
+    Schedule type: Manual
+    Destination Namespace: Destination-defined
+16. Click `Submit`.
+17. Click `Sync now` to start the sync.
+See devcontainer.md for more details.
