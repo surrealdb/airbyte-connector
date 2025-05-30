@@ -42,6 +42,8 @@ def pytest_generate_tests(metafunc):
     configs: list[str] = []
     # Check if surreal command is available
     try:
+        # Note that the integration tests require the surreal command to be available
+        # in the PATH.
         result = subprocess.run(["surreal", "--version"], capture_output=True, text=True, check=False)
         if result.returncode == 0:
             configs.append("local_file_config")
