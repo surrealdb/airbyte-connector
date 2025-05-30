@@ -1,0 +1,56 @@
+name: End-to-End Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'destination-surrealdb/**'
+      - '.devcontainer/**'
+      - 'scripts/e2e-test.sh'
+      - '.github/workflows/e2e-test.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'destination-surrealdb/**'
+      - '.devcontainer/**'
+      - 'scripts/e2e-test.sh'
+      - '.github/workflows/e2e-test.yml'
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      matrix:
+        # Test with different SurrealDB versions
+        surrealdb-version: ["v3.0.0-alpha.5", "v2.3.3", "v2.2.3"]
+    env:
+      SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
+      TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '600' }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Run end-to-end tests in dev container
+      uses: devcontainers/ci@v0.3
+      env:
+        SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
+        TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '600' }}
+      with:
+        subFolder: .
+        env: |
+          SURREALDB_VERSION=${{ matrix.surrealdb-version }}
+          TIMEOUT_SECONDS=${{ github.event.inputs.timeout_seconds || '600' }}
+        runCmd: |
+          echo "=== Starting End-to-End Test ==="
+          echo "SurrealDB version: $SURREALDB_VERSION"
+          echo "Timeout: $TIMEOUT_SECONDS seconds"
+          
+          echo "=== Running end-to-end test ==="
+          # Run the end-to-end test script
+          ./scripts/e2e-test.sh
+        push: never
