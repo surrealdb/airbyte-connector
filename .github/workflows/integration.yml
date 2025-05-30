@@ -43,7 +43,7 @@ jobs:
         runCmd: |
           echo "=== Testing with SurrealDB version: $SURREALDB_VERSION ==="
           echo "=== Verifying SurrealDB server version ==="
-          timeout 30 sh -c 'until nc -z surrealdb 8000; do sleep 1; done' || (echo "SurrealDB container not ready" && exit 1)
+          timeout 30 sh -c 'until curl -f http://surrealdb:8000/health 2>/dev/null; do sleep 1; done' || (echo "SurrealDB container not ready" && exit 1)
           surreal version --endpoint http://surrealdb:8000 || echo "CLI version query failed"
           echo "INFO FOR ROOT;" | surreal sql --endpoint http://surrealdb:8000 --username root --password root --pretty || echo "SQL info query failed"
           echo "=== Installing dependencies ==="
