@@ -23,16 +23,29 @@ jobs:
     permissions:
       contents: read
       packages: read
+    strategy:
+      matrix:
+        # Note that this version number must be a valid SurrealDB image tag
+        surrealdb-version: ["latest", "v3.0.0-alpha.5", "v2.3.3", "v2.2.3"]
+    env:
+      SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
     - name: Run integration tests in dev container
       uses: devcontainers/ci@v0.3
+      env:
+        SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
       with:
         subFolder: destination-surrealdb
         runCmd: |
-          pwd
-          ls -la
+          echo "=== Testing with SurrealDB version: $SURREALDB_VERSION ==="
+          echo "=== Verifying SurrealDB server version ==="
+          timeout 30 sh -c 'until nc -z surrealdb 8000; do sleep 1; done' || (echo "SurrealDB container not ready" && exit 1)
+          surreal version --endpoint http://surrealdb:8000 || echo "CLI version query failed"
+          echo "INFO FOR ROOT;" | surreal sql --endpoint http://surrealdb:8000 --username root --password root --pretty || echo "SQL info query failed"
+          echo "=== Installing dependencies ==="
           poetry install --no-root
+          echo "=== Running integration tests ==="
           poetry run python -m pytest integration_tests/integration_test.py -v -s --tb=long
         push: never
