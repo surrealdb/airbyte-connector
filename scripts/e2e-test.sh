@@ -197,7 +197,7 @@ EOF
     
     if [ -d "airbyte" ]; then
         cd airbyte
-        airbyte-ci connectors --name destination-surrealdb build
+        airbyte-ci --show-dagger-logs connectors --name destination-surrealdb build
         cd ..
     else
         log_error "airbyte directory not found. Please ensure the connector code is available."
