@@ -52,8 +52,13 @@ def pytest_generate_tests(metafunc):
     except FileNotFoundError:
         print("Skipping local SurrealDB tests because 'surreal' command not found.")
 
-    if Path(SECRETS_CONFIG_PATH).is_file():
+    if Path(CONFIG_PATH).is_file():
         configs.append("surrealdb_config")
+    else:
+        print(f"Skipping containerized SurrealDB tests because config file not found at: {CONFIG_PATH}")
+
+    if Path(SECRETS_CONFIG_PATH).is_file():
+        configs.append("surrealdb_secrets_config")
     else:
         print(f"Skipping remote SurrealDB tests because config file not found at: {SECRETS_CONFIG_PATH}")
 
@@ -128,6 +133,17 @@ def config(request, test_namespace_name: str, test_database_name: str) -> Genera
             tmp_dir.cleanup()
 
     elif request.param == "surrealdb_config":
+        config_dict = json.loads(Path(CONFIG_PATH).read_text(encoding="utf-8"))
+        # Prevent accidentally printing username, password, and token if `config_dict` is printed.
+        if CONFIG_SURREALDB_TOKEN in config_dict:
+            config_dict[CONFIG_SURREALDB_TOKEN] = SecretString(config_dict[CONFIG_SURREALDB_TOKEN])
+        if CONFIG_SURREALDB_USERNAME in config_dict:
+            config_dict[CONFIG_SURREALDB_USERNAME] = SecretString(config_dict[CONFIG_SURREALDB_USERNAME])
+        if CONFIG_SURREALDB_PASSWORD in config_dict:
+            config_dict[CONFIG_SURREALDB_PASSWORD] = SecretString(config_dict[CONFIG_SURREALDB_PASSWORD])
+        yield config_dict
+
+    elif request.param == "surrealdb_secrets_config":
         config_dict = json.loads(Path(SECRETS_CONFIG_PATH).read_text(encoding="utf-8"))
         # Prevent accidentally printing username, password, and token if `config_dict` is printed.
         if CONFIG_SURREALDB_TOKEN in config_dict:
