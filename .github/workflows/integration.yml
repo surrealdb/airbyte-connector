@@ -38,6 +38,8 @@ jobs:
         SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
       with:
         subFolder: destination-surrealdb
+        env: |
+          SURREALDB_VERSION=${{ matrix.surrealdb-version }}
         runCmd: |
           echo "=== Testing with SurrealDB version: $SURREALDB_VERSION ==="
           echo "=== Verifying SurrealDB server version ==="

@@ -31,7 +31,7 @@
 
 	"features": {
 		"./surrealdb": {
-			"version": "2.2.2"
+			"version": "${localEnv:SURREALDB_VERSION:2.2.2}"
 		},
 		"./abctl": {
 			"version": "0.25.0"

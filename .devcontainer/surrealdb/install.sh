@@ -39,6 +39,12 @@ elif [ "$VERSION" = "beta" ]; then
   export BETA="true"
 elif [ "$VERSION" = "nightly" ]; then
   export NIGHTLY="true"
+elif [ "$VERSION" = "latest" ]; then
+  # For latest, don't set VERSION - let the script use the default
+  unset VERSION
+else
+  # For specific versions, remove the "v" prefix if present
+  export VERSION="${VERSION#v}"
 fi
 
 curl -sSf https://install.surrealdb.com | sh
