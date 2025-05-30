@@ -29,19 +29,25 @@ jobs:
       matrix:
         # Test with different SurrealDB versions
         surrealdb-version: ["v3.0.0-alpha.5", "v2.3.3", "v2.2.3"]
-    env:
-      SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
-      TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '1200' }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
+    - name: Configure system limits for dagger
+      run: |
+        echo "Current system limits:"
+        echo "  inotify max_user_instances: $(cat /proc/sys/fs/inotify/max_user_instances)"
+        echo "  inotify max_user_watches: $(cat /proc/sys/fs/inotify/max_user_watches)"
+        echo "  ulimit -n: $(ulimit -n)"
+
+        echo "Configuring system limits for better dagger performance..."
+        echo fs.inotify.max_user_instances=8192 | sudo tee -a /etc/sysctl.conf
+        echo fs.inotify.max_user_watches=1048576 | sudo tee -a /etc/sysctl.conf
+        sudo sysctl -p
+
     - name: Run end-to-end tests in dev container
       timeout-minutes: 30
       uses: devcontainers/ci@v0.3
-      env:
-        SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
-        TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '1200' }}
       with:
         subFolder: .
         env: |
@@ -52,6 +58,16 @@ jobs:
           echo "SurrealDB version: $SURREALDB_VERSION"
           echo "Timeout: $TIMEOUT_SECONDS seconds"
           
+          echo "=== Environment Information ==="
+          echo "Container environment:"
+          echo "  Available memory: $(free -h)"
+          echo "  Available disk space: $(df -h /)"
+          echo "  Docker version: $(docker --version)"
+          echo "  System limits:"
+          echo "    ulimit -n: $(ulimit -n)"
+          echo "    inotify instances: $(cat /proc/sys/fs/inotify/max_user_instances 2>/dev/null || echo 'unavailable')"
+          echo "    inotify watches: $(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo 'unavailable')"
+
           echo "=== Running end-to-end test ==="
           # Run the end-to-end test script
           ./scripts/e2e-test.sh
