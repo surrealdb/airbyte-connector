@@ -29,11 +29,10 @@ jobs:
     - name: Run integration tests in dev container
       uses: devcontainers/ci@v0.3
       with:
-        workspaceFolder: /workspace/destination-surrealdb
+        subFolder: destination-surrealdb
         runCmd: |
           pwd
           ls -la
           poetry install --no-root
           poetry run python -m pytest integration_tests/integration_test.py -v -s --tb=long
-        configFile: .devcontainer/devcontainer.json
         push: never
