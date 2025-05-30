@@ -21,30 +21,32 @@ check_packages() {
 
 check_packages curl ca-certificates
 
-# This script will set the appropriate environment variable for the
+# This script will pass the appropriate command-line flags to the
 # SurrealDB installation script based on the version option.
 #
-# The SurrealDB installation script takes different environment variables:
-# - ALPHA=true
-# - BETA=true
-# - NIGHTLY=true
-# - VERSION=x.y.z
+# The SurrealDB installation script takes command-line flags:
+# - --alpha (or -a)
+# - --beta (or -b)
+# - --nightly (or -n)
+# - --version x.y.z (or -v x.y.z)
 # depending on what release channel you want to install from.
-# The developer of this devcontainer feature thinks having to specify different
-# feature options for different release channels is not ideal.
+
+# Determine the appropriate flag to pass to the install script
+INSTALL_ARGS=""
 
 if [ "$VERSION" = "alpha" ]; then
-  export ALPHA="true"
+  INSTALL_ARGS="--alpha"
 elif [ "$VERSION" = "beta" ]; then
-  export BETA="true"
+  INSTALL_ARGS="--beta"
 elif [ "$VERSION" = "nightly" ]; then
-  export NIGHTLY="true"
+  INSTALL_ARGS="--nightly"
 elif [ "$VERSION" = "latest" ]; then
-  # For latest, don't set VERSION - let the script use the default
-  unset VERSION
+  # For latest, don't pass any version flags - let the script use the default
+  INSTALL_ARGS=""
 else
-  # For specific versions, remove the "v" prefix if present
-  export VERSION="${VERSION#v}"
+  # For specific versions, remove the "v" prefix if present and pass --version flag
+  VERSION_CLEAN="${VERSION#v}"
+  INSTALL_ARGS="--version $VERSION_CLEAN"
 fi
 
-curl -sSf https://install.surrealdb.com | sh
+curl -sSf https://install.surrealdb.com | sh -s -- $INSTALL_ARGS
