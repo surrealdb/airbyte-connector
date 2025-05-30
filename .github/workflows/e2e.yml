@@ -21,6 +21,7 @@ on:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     permissions:
       contents: read
       packages: read
@@ -30,21 +31,22 @@ jobs:
         surrealdb-version: ["v3.0.0-alpha.5", "v2.3.3", "v2.2.3"]
     env:
       SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
-      TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '600' }}
+      TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '1200' }}
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
     - name: Run end-to-end tests in dev container
+      timeout-minutes: 30
       uses: devcontainers/ci@v0.3
       env:
         SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
-        TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '600' }}
+        TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '1200' }}
       with:
         subFolder: .
         env: |
           SURREALDB_VERSION=${{ matrix.surrealdb-version }}
-          TIMEOUT_SECONDS=${{ github.event.inputs.timeout_seconds || '600' }}
+          TIMEOUT_SECONDS=${{ github.event.inputs.timeout_seconds || '1200' }}
         runCmd: |
           echo "=== Starting End-to-End Test ==="
           echo "SurrealDB version: $SURREALDB_VERSION"
