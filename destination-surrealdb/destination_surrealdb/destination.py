@@ -161,7 +161,7 @@ class DestinationSurrealDB(Destination):
             
             stream_fields = configured_stream.stream.json_schema["properties"].keys()
             for field_name in stream_fields:
-                required = configured_stream.stream.json_schema["required"]
+                required = configured_stream.stream.json_schema["required"] if "required" in configured_stream.stream.json_schema else []
                 props = configured_stream.stream.json_schema["properties"][field_name]
                 tpe = props["type"]
                 fmt = props["format"] if "format" in props else None
