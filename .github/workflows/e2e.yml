@@ -21,7 +21,7 @@ on:
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     permissions:
       contents: read
       packages: read
@@ -32,7 +32,43 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+
+    - name: Free up disk space
+      run: |
+        echo "=== Initial Disk Usage ==="
+        df -h
+
+        echo "=== Cleaning up disk space ==="
+        # Remove unnecessary packages and caches
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /usr/share/swift
+        sudo rm -rf /opt/hostedtoolcache
+
+        # Clean package manager caches
+        sudo apt-get clean
+        sudo apt-get autoremove -y
+
+        # Clean Docker system
+        docker system prune -af --volumes || true
+
+        # Clear various caches
+        sudo rm -rf /var/cache/* || true
+        sudo rm -rf /tmp/* || true
+
+        echo "=== Disk Usage After Cleanup ==="
+        df -h
+
+        # Ensure we have at least 10GB free
+        available=$(df / | tail -1 | awk '{print $4}')
+        echo "Available space: ${available}K"
+        if [ $available -lt 10485760 ]; then
+          echo "WARNING: Less than 10GB available after cleanup"
+        fi
+
     - name: Configure system limits for dagger
       run: |
         echo "Current system limits:"
@@ -46,18 +82,27 @@ jobs:
         sudo sysctl -p
 
     - name: Run end-to-end tests in dev container
-      timeout-minutes: 30
+      timeout-minutes: 35
       uses: devcontainers/ci@v0.3
+      env:
+        SURREALDB_VERSION: ${{ matrix.surrealdb-version }}
+        TIMEOUT_SECONDS: ${{ github.event.inputs.timeout_seconds || '1200' }}
+        # Reduce Docker verbosity to save disk space
+        BUILDKIT_PROGRESS: plain
+        DOCKER_BUILDKIT: 1
       with:
         subFolder: .
         env: |
           SURREALDB_VERSION=${{ matrix.surrealdb-version }}
           TIMEOUT_SECONDS=${{ github.event.inputs.timeout_seconds || '1200' }}
+          # Reduce Docker verbosity to save disk space
+          BUILDKIT_PROGRESS=plain
+          DOCKER_BUILDKIT=1
         runCmd: |
           echo "=== Starting End-to-End Test ==="
           echo "SurrealDB version: $SURREALDB_VERSION"
           echo "Timeout: $TIMEOUT_SECONDS seconds"
-          
+
           echo "=== Environment Information ==="
           echo "Container environment:"
           echo "  Available memory: $(free -h)"
