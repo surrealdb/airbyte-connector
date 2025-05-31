@@ -399,8 +399,8 @@ EOF
         -u root -p root --ns airbyte --db airbyte 2>/dev/null || echo "[[]]")
     
     if echo "$data_check" | grep -q "\[\[\]\]" || [ -z "$data_check" ]; then
-        log_warning "No data found in SurrealDB, but sync job completed successfully"
-        log_info "This might be expected if the test dataset is empty or the table name is different"
+        log_error "No data found in SurrealDB, but sync job completed successfully"
+        exit 1
     else
         log_success "Data successfully synced to SurrealDB!"
         echo "Sample data:"
