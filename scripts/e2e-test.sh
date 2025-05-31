@@ -395,7 +395,7 @@ EOF
     
     # Check if data exists in SurrealDB
     log_info "Checking data in SurrealDB..."
-    data_check=$(echo "SELECT * FROM test_dataset LIMIT 1;" | kubectl exec "$SURREALDB_POD_NAME" -- /surreal sql \
+    data_check=$(echo "SELECT * FROM test_dataset LIMIT 1;" | kubectl exec -i "$SURREALDB_POD_NAME" -- /surreal sql \
         -u root -p root --ns airbyte --db airbyte 2>/dev/null || echo "[[]]")
     
     if echo "$data_check" | grep -q "\[\[\]\]" || [ -z "$data_check" ]; then
