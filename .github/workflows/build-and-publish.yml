@@ -1,0 +1,247 @@
+name: Build and Publish Connector
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+    paths:
+      - 'destination-surrealdb/**'
+      - '.github/workflows/build-and-publish.yml'
+      - 'Makefile'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: surrealdb/airbyte-destination-surrealdb
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        architecture: ["linux/amd64", "linux/arm64"]
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Free up disk space
+      run: |
+        echo "=== Initial Disk Usage ==="
+        df -h
+
+        echo "=== Cleaning up disk space ==="
+        # Remove unnecessary packages and caches
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /usr/local/share/boost
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /usr/share/swift
+        sudo rm -rf /opt/hostedtoolcache
+
+        # Clean package manager caches
+        sudo apt-get clean
+        sudo apt-get autoremove -y
+
+        # Clean Docker system
+        docker system prune -af --volumes || true
+
+        # Clear various caches
+        sudo rm -rf /var/cache/* || true
+        sudo rm -rf /tmp/* || true
+
+        echo "=== Disk Usage After Cleanup ==="
+        df -h
+
+    - name: Configure system limits for dagger
+      run: |
+        echo "Current system limits:"
+        echo "  inotify max_user_instances: $(cat /proc/sys/fs/inotify/max_user_instances)"
+        echo "  inotify max_user_watches: $(cat /proc/sys/fs/inotify/max_user_watches)"
+        echo "  ulimit -n: $(ulimit -n)"
+
+        echo "Configuring system limits for better dagger performance..."
+        echo fs.inotify.max_user_instances=8192 | sudo tee -a /etc/sysctl.conf
+        echo fs.inotify.max_user_watches=1048576 | sudo tee -a /etc/sysctl.conf
+        sudo sysctl -p
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract architecture for build
+      id: arch
+      run: |
+        arch="${{ matrix.architecture }}"
+        echo "airbyte_arch=$arch" >> $GITHUB_OUTPUT
+        echo "platform_arch=$(echo $arch | cut -d'/' -f2)" >> $GITHUB_OUTPUT
+
+    - name: Generate image tags
+      id: tags
+      run: |
+        # Base image name
+        IMAGE_BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+        
+        # Get commit SHA (short)
+        COMMIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+        
+        # Initialize tags array
+        TAGS=()
+        
+        # Always add commit SHA tag
+        TAGS+=("${IMAGE_BASE}:${COMMIT_SHA}-${{ steps.arch.outputs.platform_arch }}")
+        
+        # Add branch-specific tags
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          TAGS+=("${IMAGE_BASE}:canary-${{ steps.arch.outputs.platform_arch }}")
+        fi
+        
+        # Add tag-specific tags if this is a tag push
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          VERSION=$(echo ${{ github.ref }} | sed 's/refs\/tags\///')
+          TAGS+=("${IMAGE_BASE}:${VERSION}-${{ steps.arch.outputs.platform_arch }}")
+        fi
+        
+        # Join tags with newlines for output
+        printf -v TAGS_STRING '%s\n' "${TAGS[@]}"
+        echo "tags<<EOF" >> $GITHUB_OUTPUT
+        echo "$TAGS_STRING" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+        
+        # Also set a single tag for the build process
+        echo "primary_tag=${TAGS[0]}" >> $GITHUB_OUTPUT
+
+    - name: Build connector with airbyte-ci
+      timeout-minutes: 45
+      uses: devcontainers/ci@v0.3
+      env:
+        BUILDKIT_PROGRESS: plain
+        DOCKER_BUILDKIT: 1
+      with:
+        subFolder: .
+        env: |
+          BUILDKIT_PROGRESS=plain
+          DOCKER_BUILDKIT=1
+        runCmd: |
+          echo "=== Building connector for architecture: ${{ steps.arch.outputs.airbyte_arch }} ==="
+          echo "Target image tag: ${{ steps.tags.outputs.primary_tag }}"
+          
+          echo "=== Environment Information ==="
+          echo "Available memory: $(free -h)"
+          echo "Available disk space: $(df -h /)"
+          echo "Docker version: $(docker --version)"
+          
+          echo "=== Running airbyte-ci build ==="
+          # Setup development environment (clone Airbyte repo and copy connector)
+          make setup-dev
+          
+          # Build with airbyte-ci for the specific architecture
+          cd airbyte
+          airbyte-ci --show-dagger-logs connectors \
+            --name destination-surrealdb \
+            build \
+            --architecture ${{ steps.arch.outputs.airbyte_arch }}
+          
+          echo "=== Build completed ==="
+          # Verify the image was built
+          docker images | grep destination-surrealdb || echo "No destination-surrealdb images found"
+
+          echo "=== Tagging and pushing images ==="
+          SOURCE_IMAGE="airbyte/destination-surrealdb:dev"
+          # Tag and push each target tag
+          while IFS= read -r tag; do
+            if [ -n "$tag" ]; then
+              echo "Tagging: $SOURCE_IMAGE -> $tag"
+              if ! docker tag "$SOURCE_IMAGE" "$tag"; then
+                echo "Error: Failed to tag image"
+                exit 1
+              fi
+              echo "Pushing: $tag"
+              if ! docker push "$tag"; then
+                echo "Error: Failed to push image"
+                exit 1
+              fi
+            fi
+          done <<< "${{ steps.tags.outputs.tags }}"
+
+          echo "=== All images pushed successfully ==="
+        push: never
+
+  create-manifest:
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Generate manifest tags
+      id: manifest_tags
+      run: |
+        # Base image name
+        IMAGE_BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+        
+        # Get commit SHA (short)
+        COMMIT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+        
+        # Initialize tags array (without architecture suffix)
+        TAGS=()
+        
+        # Always add commit SHA tag
+        TAGS+=("${IMAGE_BASE}:${COMMIT_SHA}")
+        
+        # Add branch-specific tags
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          TAGS+=("${IMAGE_BASE}:canary")
+        fi
+        
+        # Add tag-specific tags if this is a tag push
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          VERSION=$(echo ${{ github.ref }} | sed 's/refs\/tags\///')
+          TAGS+=("${IMAGE_BASE}:${VERSION}")
+        fi
+        
+        # Join tags with newlines for output
+        printf -v TAGS_STRING '%s\n' "${TAGS[@]}"
+        echo "tags<<EOF" >> $GITHUB_OUTPUT
+        echo "$TAGS_STRING" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create and push multi-architecture manifests
+      run: |
+        IMAGE_BASE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+        
+        while IFS= read -r tag; do
+          if [ -n "$tag" ]; then
+            echo "Creating manifest for: $tag"
+            
+            # Create and push manifest
+            docker manifest create "$tag" \
+              "${tag}-amd64" \
+              "${tag}-arm64"
+            
+            docker manifest push "$tag"
+            
+            echo "Manifest created and pushed: $tag"
+          fi
+        done <<< "${{ steps.manifest_tags.outputs.tags }}"
+        
+        echo "=== All manifests created successfully ==="

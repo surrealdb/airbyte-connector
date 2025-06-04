@@ -4,6 +4,21 @@ This is the repository for developing the Airbyte SurrealDB destination connecto
 
 The actual connector code is located in the [destination-surrealdb](./destination-surrealdb) directory, which will eventually be contributed to [connectors](https://github.com/airbytehq/airbyte/tree/master/airbyte-integrations/connectors) in the Airbyte repository.
 
+### Using Published Images
+
+You can pull and use the published images:
+
+```bash
+# Pull latest multi-architecture image
+docker pull ghcr.io/surrealdb/airbyte-destination-surrealdb:latest
+
+# Pull specific version
+docker pull ghcr.io/surrealdb/airbyte-destination-surrealdb:v0.1.0
+
+# Pull specific commit
+docker pull ghcr.io/surrealdb/airbyte-destination-surrealdb:a1b2c3d
+```
+
 ## Development
 
 We have two options for developing the connector:
