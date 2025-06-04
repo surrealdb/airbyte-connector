@@ -74,13 +74,6 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Extract architecture for build
       id: arch
       run: |
@@ -129,11 +122,17 @@ jobs:
       env:
         BUILDKIT_PROGRESS: plain
         DOCKER_BUILDKIT: 1
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REGISTRY: ${{ env.REGISTRY }}
+        GITHUB_ACTOR: ${{ github.actor }}
       with:
         subFolder: .
         env: |
           BUILDKIT_PROGRESS=plain
           DOCKER_BUILDKIT=1
+          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          REGISTRY=${{ env.REGISTRY }}
+          GITHUB_ACTOR=${{ github.actor }}
         runCmd: |
           echo "=== Building connector for architecture: ${{ steps.arch.outputs.airbyte_arch }} ==="
           echo "Target image tag: ${{ steps.tags.outputs.primary_tag }}"
@@ -143,6 +142,9 @@ jobs:
           echo "Available disk space: $(df -h /)"
           echo "Docker version: $(docker --version)"
           
+          echo "=== Logging into Container Registry ==="
+          echo "$GITHUB_TOKEN" | docker login "$REGISTRY" -u "$GITHUB_ACTOR" --password-stdin
+
           echo "=== Running airbyte-ci build ==="
           # Setup development environment (clone Airbyte repo and copy connector)
           make setup-dev
